@@ -77,7 +77,7 @@ def is_prime(n):
     if n == 1:
         return False
     k = 2
-    while k < n:
+    while k <= n**0.5:
         if n % k == 0:
             return False
         k += 1
@@ -142,21 +142,18 @@ def play(strategy0, strategy1, update,
     dice:      A function of zero arguments that simulates a dice roll.
     goal:      The game ends and someone wins when this score is reached.
     """
-    who = 0
-    while score0 < goal or score1 < goal:
-        if who == 0:
-            player, opp = score0, score1
-        else:
-            player, opp = score1, score0
-        score0 = update(strategy0, player, opp, dice)
-        if score0 >100:
-            break
-        score1 = update(strategy1, player, opp, dice)
-        who = 1 - who
+    while score0 < goal and score1 < goal:
+        player, opp = score0, score1
+        num_rolls0 = strategy0(player, opp)
+        num_rolls1 = strategy1(opp, player)
+
+        score0 = update(num_rolls0, player, opp, dice)
+        score1 = update(num_rolls1, opp, player, dice)
 
     return score0, score1
 
-play(always_roll_5, always_roll_5, sus_update)
+
+
 #######################
 # Phase 2: Strategies #
 #######################
@@ -175,10 +172,11 @@ def always_roll(n):
     >>> strategy(99, 99)
     3
     """
-    assert n >= 0 and n <= 10
-    # BEGIN PROBLEM 6
-    "*** YOUR CODE HERE ***"
-    # END PROBLEM 6
+    assert 0 <= n <= 10
+    def strategy_simple(score, opponent_score):
+        return n
+    return strategy_simple
+
 
 
 def catch_up(score, opponent_score):
@@ -187,6 +185,7 @@ def catch_up(score, opponent_score):
 
     >>> catch_up(9, 4)
     5
+    >>> strategy = catch_up
     >>> strategy(17, 18)
     6
     """
@@ -207,12 +206,15 @@ def is_always_roll(strategy, goal=GOAL):
     >>> is_always_roll(catch_up)
     False
     """
-    # BEGIN PROBLEM 7
-    "*** YOUR CODE HERE ***"
-    # END PROBLEM 7
+    for m in range(goal):
+        for n in range(goal):
+            if strategy(m,n) != strategy(0, 0):
+                return False
+    return True
 
 
-def make_averaged(original_function, times_called=1000):
+
+def make_averaged(original_function, times_called=100):
     """Return a function that returns the average value of ORIGINAL_FUNCTION
     called TIMES_CALLED times.
 
@@ -223,22 +225,24 @@ def make_averaged(original_function, times_called=1000):
     >>> averaged_dice(1, dice)  # The avg of 10 4's, 10 2's, 10 5's, and 10 1's
     3.0
     """
-    # BEGIN PROBLEM 8
-    "*** YOUR CODE HERE ***"
-    # END PROBLEM 8
+    def get_averaged(*args):
+        p = 0
+        for _ in range(times_called):
+            p += original_function(*args)
+        return p/times_called
+    return get_averaged
 
 
 def max_scoring_num_rolls(dice=six_sided, times_called=1000):
     """Return the number of dice (1 to 10) that gives the maximum average score for a turn.
     Assume that the dice always return positive outcomes.
-
-    >>> dice = make_test_dice(1, 6)
-    >>> max_scoring_num_rolls(dice)
-    1
     """
-    # BEGIN PROBLEM 9
-    "*** YOUR CODE HERE ***"
-    # END PROBLEM 9
+    best, i = 1, 2
+    while i <= 10:
+        if make_averaged(roll_dice,times_called)(best,dice) < make_averaged(roll_dice,times_called)(i,dice):
+            best = i
+        i += 1
+    return best
 
 
 def winner(strategy0, strategy1):
@@ -281,26 +285,29 @@ def boar_strategy(score, opponent_score, threshold=11, num_rolls=6):
     """This strategy returns 0 dice if Boar Brawl gives at least THRESHOLD
     points, and returns NUM_ROLLS otherwise. Ignore score and Sus Fuss.
     """
-    # BEGIN PROBLEM 10
-    return num_rolls  # Remove this line once implemented.
-    # END PROBLEM 10
+    if boar_brawl(score, opponent_score) >= threshold:
+        num_rolls = 0
+    return num_rolls
 
 
 def sus_strategy(score, opponent_score, threshold=11, num_rolls=6):
     """This strategy returns 0 dice when your score would increase by at least threshold."""
-    # BEGIN PROBLEM 11
+    if sus_update(0, score, opponent_score) - score >= threshold:
+        num_rolls = 0
     return num_rolls  # Remove this line once implemented.
     # END PROBLEM 11
-
 
 def final_strategy(score, opponent_score):
     """Write a brief description of your final strategy.
 
     *** YOUR DESCRIPTION HERE ***
     """
-    # BEGIN PROBLEM 12
-    return 6  # Remove this line once implemented.
-    # END PROBLEM 12
+    if sus_update(0, score, opponent_score) - score >= 15:
+        return 0
+    elif 100 - score < 18:
+        return 3
+    else:
+        return 6
 
 
 ##########################
@@ -322,3 +329,4 @@ def run(*args):
 
     if args.run_experiments:
         run_experiments()
+
